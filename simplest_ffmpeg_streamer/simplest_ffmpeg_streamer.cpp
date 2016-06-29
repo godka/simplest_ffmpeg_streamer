@@ -20,7 +20,7 @@
 #include <stdio.h>
 
 #define __STDC_CONSTANT_MACROS
-
+#include "mythZiyaDecoder.hh"
 #ifdef _WIN32
 //Windows
 extern "C"
@@ -42,7 +42,45 @@ extern "C"
 };
 #endif
 #endif
+int AVFormatContext_init(AVFormatContext** fmt, const char* filname, int mwidth,int mheight, int mfps){
+	AVFormatContext* pFormatCtx;
+	AVOutputFormat* ifmt;
+	AVStream* video_st = NULL;
+	AVCodecContext* pCodecCtx;
 
+	pFormatCtx = avformat_alloc_context();
+	ifmt = av_guess_format(NULL, filname, NULL);
+	pFormatCtx->oformat = ifmt;
+	video_st = avformat_new_stream(pFormatCtx, 0);
+	video_st->time_base.num = 1;
+	video_st->time_base.den = mfps;
+
+
+	pCodecCtx = video_st->codec;
+	pCodecCtx->codec_id = AV_CODEC_ID_H264;
+	pCodecCtx->codec_type = AVMEDIA_TYPE_VIDEO;
+	pCodecCtx->pix_fmt = PIX_FMT_YUV420P;
+	pCodecCtx->width = mwidth;
+	pCodecCtx->height = mheight;
+	pCodecCtx->time_base.num = 1;
+	pCodecCtx->time_base.den = mfps;
+	printf("fps:%d\n", pCodecCtx->time_base.den);
+	*fmt = pFormatCtx;
+	return 0;
+}
+int myth_read_frame(mythVirtualDecoder* decoder, AVPacket* pkt){
+	PacketQueue* packet = decoder->get();
+	if (packet){
+		av_init_packet(pkt);
+		pkt->data = packet->h264Packet;
+		pkt->size = packet->h264PacketLength;
+		return 0;
+	}
+	else{
+		return -1;
+	}
+
+}
 int main(int argc, char* argv[])
 {
 	AVOutputFormat *ofmt = NULL;
@@ -59,16 +97,19 @@ int main(int argc, char* argv[])
 	//in_filename  = "cuc_ieschool.ts";
 	//in_filename  = "cuc_ieschool.mp4";
 	//in_filename  = "cuc_ieschool.h264";
-	in_filename  = "cuc_ieschool.flv";//输入URL（Input file URL）
+	in_filename  = "out.h264";//输入URL（Input file URL）
 	//in_filename  = "shanghai03_p.h264";
 	
-	out_filename = "rtmp://localhost/publishlive/livestream";//输出 URL（Output URL）[RTMP]
+	out_filename = "rtmp://localhost:1935/live/stream";//输出 URL（Output URL）[RTMP]
 	//out_filename = "rtp://233.233.233.233:6666";//输出 URL（Output URL）[UDP]
 
 	av_register_all();
 	//Network
 	avformat_network_init();
 	//Input
+#ifdef HI
+	AVFormatContext_init(&ifmt_ctx, "test.h264", 704, 576, 25);
+#else
 	if ((ret = avformat_open_input(&ifmt_ctx, in_filename, 0, 0)) < 0) {
 		printf( "Could not open input file.");
 		goto end;
@@ -77,17 +118,17 @@ int main(int argc, char* argv[])
 		printf( "Failed to retrieve input stream information");
 		goto end;
 	}
-
+#endif
 	for(i=0; i<ifmt_ctx->nb_streams; i++) 
 		if(ifmt_ctx->streams[i]->codec->codec_type==AVMEDIA_TYPE_VIDEO){
 			videoindex=i;
 			break;
 		}
-
-	av_dump_format(ifmt_ctx, 0, in_filename, 0);
-
-	//Output
 	
+	//av_dump_format(ifmt_ctx, 0, 0, 0);
+	//mythZiyaDecoder* decoder = mythZiyaDecoder::CreateNew("120.204.70.218", 1017);
+	//Output
+	//decoder->start();
 	avformat_alloc_output_context2(&ofmt_ctx, NULL, "flv", out_filename); //RTMP
 	//avformat_alloc_output_context2(&ofmt_ctx, NULL, "mpegts", out_filename);//UDP
 
@@ -98,7 +139,7 @@ int main(int argc, char* argv[])
 	}
 	ofmt = ofmt_ctx->oformat;
 	for (i = 0; i < ifmt_ctx->nb_streams; i++) {
-		//Create output AVStream according to input AVStream
+		//Create outp看看ut AVStream according to input AVStream
 		AVStream *in_stream = ifmt_ctx->streams[i];
 		AVStream *out_stream = avformat_new_stream(ofmt_ctx, in_stream->codec->codec);
 		if (!out_stream) {
@@ -106,6 +147,7 @@ int main(int argc, char* argv[])
 			ret = AVERROR_UNKNOWN;
 			goto end;
 		}
+		//704 576
 		//Copy the settings of AVCodecContext
 		ret = avcodec_copy_context(out_stream->codec, in_stream->codec);
 		if (ret < 0) {
@@ -137,9 +179,13 @@ int main(int argc, char* argv[])
 	while (1) {
 		AVStream *in_stream, *out_stream;
 		//Get an AVPacket
+		//ret = myth_read_frame(decoder, &pkt);
 		ret = av_read_frame(ifmt_ctx, &pkt);
-		if (ret < 0)
+		if (ret < 0){
 			break;
+			//SDL_Delay(1);
+			//continue;
+		}
 		//FIX：No PTS (Example: Raw H.264)
 		//Simple Write PTS
 		if(pkt.pts==AV_NOPTS_VALUE){
@@ -163,7 +209,7 @@ int main(int argc, char* argv[])
 
 		}
 
-		in_stream  = ifmt_ctx->streams[pkt.stream_index];
+		in_stream = ofmt_ctx->streams[pkt.stream_index];
 		out_stream = ofmt_ctx->streams[pkt.stream_index];
 		/* copy packet */
 		//Convert PTS/DTS

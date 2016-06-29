@@ -21,5 +21,39 @@
     <ClCompile Include="simplest_ffmpeg_streamer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="mythVirtualDecoder.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="mythZiyaDecoder.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="mythAvlist.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PEOPLE.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="mythAvlist.hh">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MythConfig.hh">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="mythVirtualDecoder.hh">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PEOPLE.hh">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="mythZiyaDecoder.hh">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="SDL2.lib" />
+    <Library Include="SDL2_net.lib" />
+    <Library Include="SDL2main.lib" />
   </ItemGroup>
 </Project>
